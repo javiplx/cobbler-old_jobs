@@ -364,37 +364,17 @@ class Importer:
                if distro.breed in [ "debian" , "ubuntu" ]:
                    importer.process_repos( self , distro )
                else:
-                   # FIXME : The location of repo definition is known from breed
-                   os.path.walk(top, self.repo_scanner, distro)
-           else:
-               print _("- this distro isn't mirrored")
-
-   # ========================================================================
-
-
-   def repo_scanner(self,distro,dirname,fnames):
-
-       """
-       This is an os.path.walk routine that looks for potential yum repositories
-       to be added to the configuration for post-install usage. 
-       """
-       
-       matches = {} 
-       for x in fnames:
-          if x == "base" or x == "repodata":
-               print "- processing repo at : %s" % dirname
-               # only run the repo scanner on directories that contain a comps.xml
-               gloob1 = glob.glob("%s/%s/*comps*.xml" % (dirname,x))
-               if len(gloob1) >= 1:
-                   if matches.has_key(dirname):
-                       print _("- looks like we've already scanned here: %s") % dirname
-                       continue
+                 dirname = os.path.dirname( importer.get_pkgdir() )
+                 for x in ( "repodata" , "base" ):
+                     if os.path.isdir( "%s/%s" % (dirname,x)):
+                         break
+                 print "search for %s/%s/*comps*.xml" % (dirname,x)
+                 gloob1 = glob.glob("%s/%s/*comps*.xml" % (dirname,x))
+                 if len(gloob1) >= 1:
                    print _("- need to process repo/comps: %s") % dirname
                    self.process_comps_file(dirname, distro)
-                   matches[dirname] = 1
-               else:
-                   print _("- directory %s is missing xml comps file, skipping") % dirname
-                   continue
+           else:
+               print _("- this distro isn't mirrored")
 
    # =======================================================================================
 
