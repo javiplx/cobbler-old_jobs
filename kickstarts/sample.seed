@@ -23,6 +23,7 @@ d-i	mirror/country		string	enter information manually
 d-i	mirror/http/hostname	string	$hostname
 d-i	mirror/http/directory	string	$directory
 d-i	mirror/http/proxy	string	
+d-i	apt-setup/security_host	string	$hostname/cobbler/repo_mirror/debian-$arch-security
 # If any cobbler repo definitions were referenced in the kickstart profile, include them here.
 
 # Network information
