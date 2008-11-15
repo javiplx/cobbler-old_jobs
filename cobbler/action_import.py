@@ -368,11 +368,9 @@ class Importer:
                  for x in ( "repodata" , "base" ):
                      if os.path.isdir( "%s/%s" % (dirname,x)):
                          break
-                 print "search for %s/%s/*comps*.xml" % (dirname,x)
                  gloob1 = glob.glob("%s/%s/*comps*.xml" % (dirname,x))
                  if len(gloob1) >= 1:
-                   print _("- need to process repo/comps: %s") % dirname
-                   self.process_comps_file(dirname, distro)
+                   self.process_comps_file(os.path.join(dirname,x), distro)
            else:
                print _("- this distro isn't mirrored")
 
@@ -380,7 +378,7 @@ class Importer:
 
                
 
-   def process_comps_file(self, comps_path, distro):
+   def process_comps_file(self, comps_dir, distro):
        """
        When importing Fedora/EL certain parts of the install tree can also be used
        as yum repos containing packages that might not yet be available via updates
@@ -389,18 +387,15 @@ class Importer:
 
        processed_repos = {}
 
-       masterdir = "repodata"
-       if not os.path.exists(os.path.join(comps_path, "repodata")):
-           # older distros...
-           masterdir = "base"
+       comps_path = os.path.dirname(comps_dir)
 
        # print _("- scanning: %(path)s (distro: %(name)s)") % { "path" : comps_path, "name" : distro.name }
 
        # figure out what our comps file is ...
-       print _("- looking for %(p1)s/%(p2)s/*comps*.xml") % { "p1" : comps_path, "p2" : masterdir }
-       files = glob.glob("%s/%s/*comps*.xml" % (comps_path, masterdir))
+       print _("- looking for %s/*comps*.xml") % comps_dir
+       files = glob.glob("%s/*comps*.xml" % comps_dir)
        if len(files) == 0:
-           print _("- no comps found here: %s") % os.path.join(comps_path, masterdir)
+           print _("- no comps found here: %s") % comps_dir
            return # no comps xml file found
 
        # pull the filename from the longer part
@@ -453,7 +448,7 @@ class Importer:
            if not processed_repos.has_key(comps_path):
                utils.remove_yum_olddata(comps_path)
                #cmd = "createrepo --basedir / --groupfile %s %s" % (os.path.join(comps_path, masterdir, comps_file), comps_path)
-               cmd = "createrepo -c cache --groupfile %s %s" % (os.path.join(comps_path, masterdir, comps_file), comps_path)
+               cmd = "createrepo -c cache --groupfile %s %s" % (os.path.join(comps_dir, comps_file), comps_path)
                print _("- %s") % cmd
                sub_process.call(cmd,shell=True)
                processed_repos[comps_path] = 1
