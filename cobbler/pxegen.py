@@ -400,6 +400,16 @@ class PXEGen:
             blended = utils.blender(self.api, True, image)
         kopts = blended.get("kernel_options","")
 
+        # rework kernel options for non-redhat distros
+        # FIXME : kopts is not a hash but a plain string
+        if distro.breed == "debian":
+            rejections = [ 'text' , 'kssendmac' ]
+            for k in rejections:
+                kopts = kopts.replace(" %s "%k," ")
+            translations = { 'ksdevice':"interface" , 'lang':"locale" }
+            for k,v in translations.iteritems():
+                kopts = kopts.replace("%s="%k,"%s="%v)
+
         # generate the append line
         hkopts = utils.hash_to_string(kopts)
         if (not arch or arch != "ia64") and initrd_path:
