@@ -1023,6 +1023,9 @@ class DebianImporter ( BaseImporter ) :
        self.rootdir = rootdir
        self.pkgdir = pkgdir
 
+       self.mirror_url = "http://ftp.%s.debian.org/debian/dists/%s"
+       self.security_url = "http://security.debian.org/debian-security/dists/%s/updates"
+
    def get_release_files(self):
        # search for base-files or base-installer ?
        return glob.glob(os.path.join(self.get_pkgdir(), "main/b/base-files" , "base-files_*"))
@@ -1084,7 +1087,7 @@ class DebianImporter ( BaseImporter ) :
        repo.set_keep_updated( False )
        repo.set_name( distro.name )
        # NOTE : The location of the mirror should come from timezone
-       repo.set_mirror( "http://ftp.%s.debian.org/debian/dists/%s" % ( 'us' , '@@suite@@' ) )
+       repo.set_mirror( self.mirror_url % ( 'us' , '@@suite@@' ) )
 
        security_repo = item_repo.Repo(main_importer.config)
        security_repo.set_breed( "apt" )
@@ -1092,7 +1095,7 @@ class DebianImporter ( BaseImporter ) :
        security_repo.set_keep_updated( False )
        security_repo.set_name( distro.name + "-security" )
        # There are no official mirrors for security updates
-       security_repo.set_mirror( "http://security.debian.org/debian-security/dists/%s/updates" % '@@suite@@' )
+       security_repo.set_mirror( self.security_url % '@@suite@@' )
 
        print "- Added repos for %s" % distro.name
        repos  = main_importer.config.repos()
@@ -1105,6 +1108,9 @@ class UbuntuImporter ( DebianImporter ) :
    def __init__(self,(rootdir,pkgdir)):
        DebianImporter.__init__(self,(rootdir,pkgdir))
        self.breed = "ubuntu"
+
+       self.mirror_url = "http://ftp.%s.ubuntu.org/ubuntu/dists/%s"
+       self.security_url = "http://security.ubuntu.org/ubuntu-security/dists/%s/updates"
 
    def scan_pkg_filename(self, deb):
 
