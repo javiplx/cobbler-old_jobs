@@ -369,8 +369,9 @@ class Importer:
                      if os.path.isdir( "%s/%s" % (dirname,x)):
                          break
                  gloob1 = glob.glob("%s/%s/*comps*.xml" % (dirname,x))
+                 # FIXME : raise exception if multiple matches ?
                  if len(gloob1) >= 1:
-                   self.process_comps_file(os.path.join(dirname,x), distro)
+                   self.process_comps_file(gloob1[0], distro)
            else:
                print _("- this distro isn't mirrored")
 
@@ -378,7 +379,7 @@ class Importer:
 
                
 
-   def process_comps_file(self, comps_dir, distro):
+   def process_comps_file(self, comps_fullname, distro):
        """
        When importing Fedora/EL certain parts of the install tree can also be used
        as yum repos containing packages that might not yet be available via updates
@@ -387,19 +388,10 @@ class Importer:
 
        processed_repos = {}
 
+       comps_dir = os.path.dirname(comps_fullname)
        comps_path = os.path.dirname(comps_dir)
 
        # print _("- scanning: %(path)s (distro: %(name)s)") % { "path" : comps_path, "name" : distro.name }
-
-       # figure out what our comps file is ...
-       print _("- looking for %s/*comps*.xml") % comps_dir
-       files = glob.glob("%s/*comps*.xml" % comps_dir)
-       if len(files) == 0:
-           print _("- no comps found here: %s") % comps_dir
-           return # no comps xml file found
-
-       # pull the filename from the longer part
-       comps_file = files[0].split("/")[-1]
 
        try:
 
@@ -447,8 +439,10 @@ class Importer:
 
            if not processed_repos.has_key(comps_path):
                utils.remove_yum_olddata(comps_path)
+               # FIXME : If a repodata directory already exists, why don't we check contents instead of re-populating it ?
+               # FIXME : Shouldn't it be better to use the old yum-arch for RHEL ?
                #cmd = "createrepo --basedir / --groupfile %s %s" % (os.path.join(comps_path, masterdir, comps_file), comps_path)
-               cmd = "createrepo -c cache --groupfile %s %s" % (os.path.join(comps_dir, comps_file), comps_path)
+               cmd = "createrepo -c cache --groupfile %s %s" % (comps_fullname, comps_path)
                print _("- %s") % cmd
                sub_process.call(cmd,shell=True)
                processed_repos[comps_path] = 1
