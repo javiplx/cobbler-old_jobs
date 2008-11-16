@@ -1023,7 +1023,7 @@ class DebianImporter ( BaseImporter ) :
        self.rootdir = rootdir
        self.pkgdir = pkgdir
 
-       self.mirror_url = "http://ftp.%s.debian.org/debian/dists/%s"
+       self.mirror_url = "http://ftp.debian.org/debian/dists/%s"
        self.security_url = "http://security.debian.org/debian-security/dists/%s/updates"
 
    def get_release_files(self):
@@ -1086,8 +1086,7 @@ class DebianImporter ( BaseImporter ) :
        repo.set_arch( distro.arch )
        repo.set_keep_updated( False )
        repo.set_name( distro.name )
-       # NOTE : The location of the mirror should come from timezone
-       repo.set_mirror( self.mirror_url % ( 'us' , '@@suite@@' ) )
+       repo.set_mirror( self.mirror_url % '@@suite@@' )
 
        security_repo = item_repo.Repo(main_importer.config)
        security_repo.set_breed( "apt" )
@@ -1109,8 +1108,8 @@ class UbuntuImporter ( DebianImporter ) :
        DebianImporter.__init__(self,(rootdir,pkgdir))
        self.breed = "ubuntu"
 
-       self.mirror_url = "http://ftp.%s.ubuntu.org/ubuntu/dists/%s"
-       self.security_url = "http://security.ubuntu.org/ubuntu-security/dists/%s/updates"
+       self.mirror_url = "http://ftp.ubuntu.com/ubuntu/dists/%s"
+       self.security_url = "http://security.ubuntu.com/ubuntu/dists/%s-security"
 
    def scan_pkg_filename(self, deb):
 
@@ -1140,10 +1139,10 @@ class UbuntuImporter ( DebianImporter ) :
    def set_variance(self, flavor, major, minor, arch):
   
        # Release names taken from wikipedia
-       dist_names = { '4.10':"WartyWarthog", '5.4':"HoaryHedgehog", '5.10':"BreezyBadger", '6.4':"DapperDrake", '6.10':"EdgyEft", '7.4':"FeistyFawn", '7.10':"GutsyGibbon", '8.4':"HardyHeron", '8.10':"IntrepidIbex", '9.4':"JauntyJackalope" }
+       dist_names = { '4.10':"WartyWarthog", '5.4':"HoaryHedgehog", '5.10':"BreezyBadger", '6.4':"DapperDrake", '6.10':"EdgyEft", '7.4':"FeistyFawn", '7.10':"GutsyGibbon", '8.4':"hardy", '8.10':"intrepid", '9.4':"JauntyJackalope" }
        dist_vers = "%s.%s" % ( major , minor )
        if not dist_names.has_key( dist_vers ):
-           dist_names['4ubuntu2.0'] = "IntrepidIbex"
+           dist_names['4ubuntu2.0'] = "intrepid"
        os_version = dist_names[dist_vers]
 
        return os_version , "/etc/cobbler/sample.seed"
