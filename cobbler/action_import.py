@@ -267,7 +267,7 @@ class Importer:
 
            if self.kickstart_file == None:
                kdir = os.path.dirname(distro.kernel)   
-               importer = import_factory(kdir,self.path)
+               importer = import_factory(kdir,self.path,self.breed)
                for rpm in importer.get_release_files():
                      # FIXME : This redhat specific check should go into the importer.find_release_files method
                      if rpm.find("notes") != -1:
@@ -358,11 +358,12 @@ class Importer:
            # FIXME : Shouldn't decide this the value of self.network_root ?
            if distro.kernel.find("ks_mirror") != -1:
                basepath = os.path.dirname(distro.kernel)
-               importer = import_factory(basepath,self.path)
+               importer = import_factory(basepath,self.path,self.breed)
                top = importer.get_rootdir()
                print _("- descent into %s") % top
                if distro.breed in [ "debian" , "ubuntu" ]:
-                   importer.process_repos( self , distro )
+                   if importer.pkgdir:
+                       importer.process_repos( self , distro )
                else:
                    # FIXME : The location of repo definition is known from breed
                    os.path.walk(top, self.repo_scanner, distro)
@@ -517,7 +518,7 @@ class Importer:
 
            if x.startswith("initrd"):
                initrd = os.path.join(dirname,x)
-           if ( x.startswith("vmlinuz") or x.startswith("kernel.img") ) and x.find("initrd") == -1:
+           if ( x.startswith("vmlinuz") or x.startswith("kernel.img") or x.startswith("linux") ) and x.find("initrd") == -1:
                kernel = os.path.join(dirname,x)
            if initrd is not None and kernel is not None and dirname.find("isolinux") == -1:
                adtl = self.add_entry(dirname,kernel,initrd)
@@ -542,13 +543,17 @@ class Importer:
        if self.arch and proposed_arch and self.arch != proposed_arch:
            raise CX(_("Arch from pathname (%s) does not match with supplied one %s")%(proposed_arch,self.arch))
 
-       importer = import_factory(dirname,self.path)
+       importer = import_factory(dirname,self.path,self.breed)
        if self.breed and self.breed != importer.breed:
            raise CX( _("Requested breed (%s); breed found is %s") % ( self.breed , breed ) )
 
        archs = importer.learn_arch_from_tree()
-       if self.arch and self.arch not in archs:
-           raise CX(_("Given arch (%s) not found on imported tree %s")%(self.arch,importer.get_pkgdir()))
+       if not archs:
+           if self.arch:
+               archs.append( self.arch )
+       else:
+           if self.arch and self.arch not in archs:
+               raise CX(_("Given arch (%s) not found on imported tree %s")%(self.arch,importer.get_pkgdir()))
        if proposed_arch:
            if proposed_arch not in archs:
                print _("Warning: arch from pathname (%s) not found on imported tree %s") % (proposed_arch,importer.get_pkgdir())
@@ -760,18 +765,20 @@ def guess_breed(kerneldir,path):
 # ============================================================
 
 
-def import_factory(kerneldir,path):
+def import_factory(kerneldir,path,breed):
     """
     Given a directory containing a kernel, return an instance of an Importer
     that can be used to complete the import.
     """
 
-    breed , rootdir = guess_breed(kerneldir,path)
-    # NOTE : The guess_breed code should be included in the factory, in order to make 
-    # the real root directory available, so allowing kernels at different levels within 
-    # the same tree (removing the isolinux rejection from distro_adder) -- JP
+    rootdir = (kerneldir,None)
+    if not breed:
+        breed , rootdir = guess_breed(kerneldir,path)
+        # NOTE : The guess_breed code should be included in the factory, in order to make 
+        # the real root directory available, so allowing kernels at different levels within 
+        # the same tree (removing the isolinux rejection from distro_adder) -- JP
 
-    print _("- found content (breed=%s) at %s") % (breed,kerneldir)
+        print _("- found content (breed=%s) at %s") % (breed,kerneldir)
 
     if breed == "redhat":
         return RedHatImporter(rootdir)
@@ -825,7 +832,9 @@ class BaseImporter:
    # ===================================================================
 
    def get_pkgdir(self):
-       return os.path.join(self.rootdir,self.pkgdir)
+       if not self.pkgdir:
+           return self.get_rootdir()
+       return os.path.join(self.get_rootdir(),self.pkgdir)
    
    # ===================================================================
 
@@ -879,6 +888,8 @@ class RedHatImporter ( BaseImporter ) :
    # ================================================================
 
    def get_release_files(self):
+       if not self.pkgdir:
+           return []
        return glob.glob(os.path.join(self.get_pkgdir(), "*release-*"))
 
    # ================================================================
@@ -1027,6 +1038,8 @@ class DebianImporter ( BaseImporter ) :
        self.security_url = "http://security.debian.org/debian-security/dists/%s/updates"
 
    def get_release_files(self):
+       if not self.pkgdir:
+           return []
        # search for base-files or base-installer ?
        return glob.glob(os.path.join(self.get_pkgdir(), "main/b/base-files" , "base-files_*"))
 
@@ -1086,6 +1099,7 @@ class DebianImporter ( BaseImporter ) :
        repo.set_arch( distro.arch )
        repo.set_keep_updated( False )
        repo.set_name( distro.name )
+       print _("- creating new repo: %s") % repo.name
        repo.set_mirror( self.mirror_url % '@@suite@@' )
 
        security_repo = item_repo.Repo(main_importer.config)
@@ -1093,6 +1107,7 @@ class DebianImporter ( BaseImporter ) :
        security_repo.set_arch( distro.arch )
        security_repo.set_keep_updated( False )
        security_repo.set_name( distro.name + "-security" )
+       print _("- creating new repo: %s") % security_repo.name
        # There are no official mirrors for security updates
        security_repo.set_mirror( self.security_url % '@@suite@@' )
 
