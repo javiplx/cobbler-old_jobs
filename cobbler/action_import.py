@@ -277,7 +277,8 @@ class Importer:
                          continue
                      (major, minor) = results
                      # print _("- finding default kickstart template for %(flavor)s %(major)s") % { "flavor" : importer.flavor, "major" : major }
-                     version , ks = importer.set_variance(major, minor, distro.arch)
+                     version = importer.get_version(major, minor)
+                     ks = importer.get_kickstart(major, minor, distro.arch, version)
                      ds = importer.get_datestamp()
                      distro.set_comment("%s.%s" % (version, int(minor)))
                      distro.set_os_version(version)
@@ -962,12 +963,10 @@ class RedHatImporter ( BaseImporter ) :
            discinfo.close()
        return float(datestamp)
 
-   def set_variance(self, major, minor, arch):
+   def get_version(self, major, minor):
   
        """
-       find the profile kickstart and set the distro breed/os-version based on what
-       we can find out from the rpm filenames and then return the kickstart
-       path to use.
+       get the distro breed/os-version based on version numbers
        """
 
        if self.flavor == "fedora":
@@ -977,20 +976,27 @@ class RedHatImporter ( BaseImporter ) :
            # in codes.py.  If it fails we set it to something generic
            # and don't worry about it.
            try:
-               os_version = "fedora%s" % int(major)
+               return "%s%d" % (self.flavor , major)
            except:
-               os_version = "other"
+               return "other"
 
        if self.flavor == "redhat" or self.flavor == "centos":
            if major <= 2:
                 # rhel2.1 is the only rhel2
-                os_version = "rhel2.1"
+                return "rhel2.1"
            else:
                 try:
                     # must use libvirt version
-                    os_version = "rhel%s" % (int(major))
+                    return "rhel%d" % major
                 except:
-                    os_version = "other"
+                    return "other"
+   return None
+
+   def get_kickstart(self, major, minor, arch, os_version):
+  
+       """
+       find the profile kickstart from the distro breed/os-version
+       """
 
        kickbase = "/var/lib/cobbler/kickstarts"
        # Look for ARCH/OS_VERSION.MINOR kickstart first
@@ -1009,22 +1015,22 @@ class RedHatImporter ( BaseImporter ) :
        ]
        for kickstart in kickstarts:
            if os.path.exists(kickstart):
-               return os_version, kickstart
+               return kickstart
 
        if self.flavor == "fedora":
            if major >= 8:
-                return os_version , "/var/lib/cobbler/kickstarts/sample_end.ks"
+                return "/var/lib/cobbler/kickstarts/sample_end.ks"
            if major >= 6:
-                return os_version , "/var/lib/cobbler/kickstarts/sample.ks"
+                return "/var/lib/cobbler/kickstarts/sample.ks"
 
        if self.flavor == "redhat" or self.flavor == "centos":
            if major >= 5:
-                return os_version , "/var/lib/cobbler/kickstarts/sample.ks"
+                return "/var/lib/cobbler/kickstarts/sample.ks"
 
-           return os_version , "/var/lib/cobbler/kickstarts/legacy.ks"
+           return "/var/lib/cobbler/kickstarts/legacy.ks"
 
        print _("- warning: could not use distro specifics, using rhel 4 compatible kickstart")
-       return None , "/var/lib/cobbler/kickstarts/legacy.ks"
+       return "/var/lib/cobbler/kickstarts/legacy.ks"
 
 class DebianImporter ( BaseImporter ) :
 
@@ -1063,13 +1069,15 @@ class DebianImporter ( BaseImporter ) :
 
        return (accum[0], accum[1])
 
-   def set_variance(self, major, minor, arch):
+   def get_version(self, major, minor):
 
        dist_names = { '4.0' : "etch" , '5.0' : "lenny" }
        dist_vers = "%s.%s" % ( major , minor )
-       os_version = dist_names[dist_vers]
+       return dist_names[dist_vers]
 
-       return os_version , "/var/lib/cobbler/kickstarts/sample.seed"
+   def get_kickstart(self, major, minor, arch, os_version):
+
+       return "/var/lib/cobbler/kickstarts/sample.seed"
 
    def set_install_tree(self, distro, url):
        idx = url.find("://")
@@ -1141,14 +1149,16 @@ class UbuntuImporter ( DebianImporter ) :
 
        return (accum[0], accum[1])
 
-   def set_variance(self, major, minor, arch):
-  
+   def get_version(self, major, minor):
+
        # Release names taken from wikipedia
        dist_names = { '4.10':"WartyWarthog", '5.4':"HoaryHedgehog", '5.10':"BreezyBadger", '6.4':"DapperDrake", '6.10':"EdgyEft", '7.4':"FeistyFawn", '7.10':"GutsyGibbon", '8.4':"HardyHeron", '8.10':"IntrepidIbex", '9.4':"JauntyJackalope" }
        dist_vers = "%s.%s" % ( major , minor )
        if not dist_names.has_key( dist_vers ):
            dist_names['4ubuntu2.0'] = "IntrepidIbex"
-       os_version = dist_names[dist_vers]
+       return dist_names[dist_vers]
 
-       return os_version , "/var/lib/cobbler/kickstarts/sample.seed"
+   def get_kickstart(self, major, minor, arch, os_version):
+  
+       return "/var/lib/cobbler/kickstarts/sample.seed"
 
