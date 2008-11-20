@@ -275,9 +275,9 @@ class Importer:
                      results = importer.scan_pkg_filename(rpm)
                      if results is None:
                          continue
-                     (flavor, major, minor) = results
-                     # print _("- finding default kickstart template for %(flavor)s %(major)s") % { "flavor" : flavor, "major" : major }
-                     version , ks = importer.set_variance(flavor, major, minor, distro.arch)
+                     (major, minor) = results
+                     # print _("- finding default kickstart template for %(flavor)s %(major)s") % { "flavor" : importer.flavor, "major" : major }
+                     version , ks = importer.set_variance(major, minor, distro.arch)
                      ds = importer.get_datestamp()
                      distro.set_comment("%s.%s" % (version, int(minor)))
                      distro.set_os_version(version)
@@ -918,22 +918,22 @@ class RedHatImporter ( BaseImporter ) :
        # it may be slightly wrong, but it will be close enough
        # for RHEL5 we can get it exactly.
        
+       self.flavor = "redhat"
        for x in [ "4AS", "4ES", "4WS", "4common", "4Desktop" ]:
           if rpm.find(x) != -1:
-             return ("redhat", 4, 0)
+             return (4, 0)
        for x in [ "3AS", "3ES", "3WS", "3Desktop" ]:
           if rpm.find(x) != -1:
-             return ("redhat", 3, 0)
+             return (3, 0)
        for x in [ "2AS", "2ES", "2WS", "2Desktop" ]:
           if rpm.find(x) != -1:
-             return ("redhat", 2, 0)
+             return (2, 0)
 
        # now get the flavor:
-       flavor = "redhat"
        if rpm.lower().find("fedora") != -1:
-          flavor = "fedora"
+          self.flavor = "fedora"
        if rpm.lower().find("centos") != -1:
-          flavor = "centos"
+          self.flavor = "centos"
 
        # get all the tokens and try to guess a version
        accum = []
@@ -949,7 +949,7 @@ class RedHatImporter ( BaseImporter ) :
 
        major = float(accum[0])
        minor = float(accum[1])
-       return (flavor, major, minor)
+       return (major, minor)
 
    def get_datestamp(self):
        """
@@ -962,7 +962,7 @@ class RedHatImporter ( BaseImporter ) :
            discinfo.close()
        return float(datestamp)
 
-   def set_variance(self, flavor, major, minor, arch):
+   def set_variance(self, major, minor, arch):
   
        """
        find the profile kickstart and set the distro breed/os-version based on what
@@ -970,7 +970,7 @@ class RedHatImporter ( BaseImporter ) :
        path to use.
        """
 
-       if flavor == "fedora":
+       if self.flavor == "fedora":
 
            # this may actually fail because the libvirt/virtinst database
            # is not always up to date.  We keep a simplified copy of this
@@ -981,7 +981,7 @@ class RedHatImporter ( BaseImporter ) :
            except:
                os_version = "other"
 
-       if flavor == "redhat" or flavor == "centos":
+       if self.flavor == "redhat" or self.flavor == "centos":
            if major <= 2:
                 # rhel2.1 is the only rhel2
                 os_version = "rhel2.1"
@@ -1011,13 +1011,13 @@ class RedHatImporter ( BaseImporter ) :
            if os.path.exists(kickstart):
                return os_version, kickstart
 
-       if flavor == "fedora":
+       if self.flavor == "fedora":
            if major >= 8:
                 return os_version , "/var/lib/cobbler/kickstarts/sample_end.ks"
            if major >= 6:
                 return os_version , "/var/lib/cobbler/kickstarts/sample.ks"
 
-       if flavor == "redhat" or flavor == "centos":
+       if self.flavor == "redhat" or self.flavor == "centos":
            if major >= 5:
                 return os_version , "/var/lib/cobbler/kickstarts/sample.ks"
 
@@ -1061,9 +1061,9 @@ class DebianImporter ( BaseImporter ) :
               pass
        accum.append(0)
 
-       return (None, accum[0], accum[1])
+       return (accum[0], accum[1])
 
-   def set_variance(self, flavor, major, minor, arch):
+   def set_variance(self, major, minor, arch):
 
        dist_names = { '4.0' : "etch" , '5.0' : "lenny" }
        dist_vers = "%s.%s" % ( major , minor )
@@ -1139,9 +1139,9 @@ class UbuntuImporter ( DebianImporter ) :
            accum.extend( tokens2[2:] )
        accum.append(0)
 
-       return (None, accum[0], accum[1])
+       return (accum[0], accum[1])
 
-   def set_variance(self, flavor, major, minor, arch):
+   def set_variance(self, major, minor, arch):
   
        # Release names taken from wikipedia
        dist_names = { '4.10':"WartyWarthog", '5.4':"HoaryHedgehog", '5.10':"BreezyBadger", '6.4':"DapperDrake", '6.10':"EdgyEft", '7.4':"FeistyFawn", '7.10':"GutsyGibbon", '8.4':"HardyHeron", '8.10':"IntrepidIbex", '9.4':"JauntyJackalope" }
