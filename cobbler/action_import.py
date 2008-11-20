@@ -876,6 +876,33 @@ class BaseImporter:
    def process_repos(self, main_importer, distro):
        raise exceptions.NotImplementedError
 
+   def get_kickstart(self, major, minor, arch, os_version):
+  
+       """
+       find the profile kickstart from the distro breed/os-version
+       """
+
+       kickbase = "/var/lib/cobbler/kickstarts"
+       # Look for ARCH/OS_VERSION.MINOR kickstart first
+       #          ARCH/OS_VERSION next
+       #          OS_VERSION next
+       #          OS_VERSION.MINOR next
+       #          ARCH/default.ks next
+       #          default.ks finally.
+       kickstarts = [
+           "%s/%s/%s.%i.%s" % (kickbase,arch,os_version,int(minor),self.extension), 
+           "%s/%s/%s.%s" % (kickbase,arch,os_version,self.extension), 
+           "%s/%s.%i.%s" % (kickbase,os_version,int(minor),self.extension),
+           "%s/%s.%s" % (kickbase,os_version,self.extension),
+           "%s/%s/default.%s" % (kickbase,arch,self.extension),
+           "%s/default.%s" % (kickbase,self.extension)
+       ]
+       for kickstart in kickstarts:
+           if os.path.exists(kickstart):
+               return kickstart
+
+       return None
+
 # ===================================================================
 # ===================================================================
 
@@ -998,24 +1025,10 @@ class RedHatImporter ( BaseImporter ) :
        find the profile kickstart from the distro breed/os-version
        """
 
-       kickbase = "/var/lib/cobbler/kickstarts"
-       # Look for ARCH/OS_VERSION.MINOR kickstart first
-       #          ARCH/OS_VERSION next
-       #          OS_VERSION next
-       #          OS_VERSION.MINOR next
-       #          ARCH/default.ks next
-       #          default.ks finally.
-       kickstarts = [
-           "%s/%s/%s.%i.ks" % (kickbase,arch,os_version,int(minor)), 
-           "%s/%s/%s.ks" % (kickbase,arch,os_version), 
-           "%s/%s.%i.ks" % (kickbase,os_version,int(minor)),
-           "%s/%s.ks" % (kickbase,os_version),
-           "%s/%s/default.ks" % (kickbase,arch),
-           "%s/default.ks" % kickbase
-       ]
-       for kickstart in kickstarts:
-           if os.path.exists(kickstart):
-               return kickstart
+       self.extension = "ks"
+       kickstart = BaseImporter.get_kickstart(self, major, minor, arch, os_version)
+       if kickstart:
+           return kickstart
 
        if self.flavor == "fedora":
            if major >= 8:
@@ -1076,6 +1089,11 @@ class DebianImporter ( BaseImporter ) :
        return dist_names[dist_vers]
 
    def get_kickstart(self, major, minor, arch, os_version):
+
+       self.extension = "debian.seed"
+       kickstart = BaseImporter.get_kickstart(self, major, minor, arch, os_version)
+       if kickstart:
+           return kickstart
 
        return "/var/lib/cobbler/kickstarts/sample.seed"
 
@@ -1160,5 +1178,10 @@ class UbuntuImporter ( DebianImporter ) :
 
    def get_kickstart(self, major, minor, arch, os_version):
   
+       self.extension = "ubuntu.seed"
+       kickstart = BaseImporter.get_kickstart(self, major, minor, arch, os_version)
+       if kickstart:
+           return kickstart
+
        return "/var/lib/cobbler/kickstarts/sample.seed"
 
