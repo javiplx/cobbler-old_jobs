@@ -645,6 +645,25 @@ class Importer:
 
                self.profiles.add(profile,save=True)
 
+           if importer.breed in ( "debian" , "ubuntu" ):
+               rescue_name = 'rescue-' + name
+               existing_profile = self.profiles.find(name=rescue_name)
+
+               if existing_profile is None:
+                   print _("- creating new profile: %s") % rescue_name
+                   profile = self.config.new_profile()
+               else:
+                   continue
+
+               profile.set_name(rescue_name)
+               profile.set_distro(name)
+               profile.set_virt_type("qemu")
+               profile.kernel_options['rescue/enable'] = "true"
+               profile.kickstart = '/etc/cobbler/pxerescue.seed'
+
+               self.profiles.add(profile,save=True)
+
+       self.api.serialize()
        self.api.serialize()
        return distros_added
 

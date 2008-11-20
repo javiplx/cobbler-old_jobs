@@ -1,0 +1,6 @@
+
+# System keyboard
+d-i	console-setup/dont_ask_layout	note	
+d-i	console-keymaps-at/keymap	select	us
+# System language
+
