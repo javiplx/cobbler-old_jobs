@@ -40,7 +40,7 @@ RSYNC_CMD =  "rsync -a %s '%s' %s/ks_mirror/%s --exclude-from=/etc/cobbler/rsync
 
 class Importer:
 
-   def __init__(self,api,config,mirror,mirror_name,network_root=None,kickstart_file=None,rsync_flags=None,arch=None,breed=None):
+   def __init__(self,api,config,mirror,mirror_name,network_root=None,kickstart_file=None,rsync_flags=None,arch=None,breed=None,os_version=None):
        """
        Performs an import of a install tree (or trees) from the given
        mirror address.  The prefix of the distro is to be specified
@@ -64,6 +64,7 @@ class Importer:
        self.rsync_flags = rsync_flags
        self.arch = arch
        self.breed = breed
+       self.os_version = os_version
 
    # ========================================================================
 
@@ -103,6 +104,9 @@ class Importer:
  
        if self.kickstart_file and not self.breed:
            raise CX(_("Kickstart file can only be specified when a specific breed is selected"))
+
+       if self.os_version and not self.breed:
+           raise CX(_("OS version can only be specified when a specific breed is selected"))
 
        if self.breed and self.breed.lower() not in [ "redhat", "debian", "ubuntu" ]:
            raise CX(_("Supplied import breed is not supported"))
@@ -278,12 +282,16 @@ class Importer:
                      (flavor, major, minor) = results
                      # print _("- finding default kickstart template for %(flavor)s %(major)s") % { "flavor" : flavor, "major" : major }
                      version , ks = importer.set_variance(flavor, major, minor, distro.arch)
+                     if self.os_version:
+                         version = self.os_version
                      ds = importer.get_datestamp()
                      distro.set_comment("%s.%s" % (version, int(minor)))
                      distro.set_os_version(version)
                      if ds is not None:
                          distro.set_tree_build_time(ds)
                      profile.set_kickstart(ks)
+               if self.os_version and not distro.os_version:
+                     distro.set_os_version(self.os_version)
 
            self.configure_tree_location(distro,importer)
            self.distros.add(distro,save=True) # re-save
